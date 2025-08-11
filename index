@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IVY Crypto Conquest Elite: Master the Solana Empire!</title>
+    <style>
+        body { margin: 0; background: linear-gradient(to bottom, #228B22, #006400); font-family: 'Arial Black', sans-serif; color: #FFD700; } /* Luxurious gradient */
+        canvas { display: block; margin: 0 auto; border: 4px solid gold; box-shadow: 0 0 20px rgba(255,215,0,0.5); background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="50" height="50"%3E%3Cpath d="M25 5 C10 20 40 20 25 35 C10 20 40 20 25 5" fill="%2300FF00" opacity="0.2" /%3E%3C/svg%3E') repeat; } /* Enhanced leaf pattern */
+        #hud { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 15px; box-shadow: 0 0 15px gold; font-size: 20px; text-shadow: 2px 2px 4px black; }
+        #cryptoStats { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 15px; box-shadow: 0 0 15px gold; font-size: 18px; text-shadow: 2px 2px 4px black; }
+        #tradePanel { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,100,0,0.9); padding: 20px; border-radius: 20px; box-shadow: 0 0 25px gold; display: none; color: #FFD700; width: 300px; text-align: center; }
+        #controls { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; }
+        .button { background: linear-gradient(#FFD700, #DAA520); color: #006400; padding: 15px; margin: 10px 0; border-radius: 10px; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px gold; transition: transform 0.2s; }
+        .button:hover { transform: scale(1.1); }
+        #gameOver { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #FF0000; font-size: 50px; text-shadow: 3px 3px 6px black; display: none; text-align: center; background: rgba(0,0,0,0.8); padding: 30px; border-radius: 20px; box-shadow: 0 0 30px red; }
+        #communityImpact { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #FFF; font-size: 16px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 10px; width: 60%; text-align: center; }
+        #achievements { position: absolute; top: 150px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 10px; font-size: 14px; display: none; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="hud">
+        ⚕️ Health: <span id="health">100</span><br>
+        💰 $IVY: <span id="tokens">100</span><br>
+        📈 PNL: <span id="pnl">0</span><br>
+        🏆 Score: <span id="score">0</span><br>
+        🎚️ Level: <span id="level">1</span>
+    </div>
+    <div id="cryptoStats">
+        📊 MC: <span id="mc">$576K</span><br>
+        💧 Liquidity: <span id="liquidity">$50K</span><br>
+        🔄 Volume: <span id="volume">$10K</span><br>
+        👥 Community: <span id="community">Elite</span>
+    </div>
+    <div id="tradePanel">
+        <h3>Elite Trade Hub 🌟</h3>
+        Buy Lux Upgrades: <input type="number" id="buyAmount" min="1" value="1"><br>
+        Sell for Premium Liquidity: <input type="number" id="sellAmount" min="1" value="1"><br>
+        <div class="button" onclick="trade('buy')">Buy 💎</div>
+        <div class="button" onclick="trade('sell')">Sell 🔱</div>
+        <div class="button" onclick="closeTrade()">Close ❌</div>
+    </div>
+    <div id="controls">
+        <div class="button" onclick="openTrade()">Trade Panel 📉</div>
+        <div class="button" id="deployBtn">Deploy Elite Drone 🚀</div>
+        <div class="button" id="specialBtn">Special Attack ⚡</div>
+    </div>
+    <div id="gameOver">Empire Fallen! 😢<br>Final PNL: <span id="finalPnl">0</span><br>Elite Score: <span id="finalScore">0</span><br>Reload for Glory!</div>
+    <div id="communityImpact">🌐 Community Elite Impact: Mastering $IVY trades elevates MC & liquidity, fostering a high-class Solana empire. High volume = elite rewards, but volatility affects PNL—trade wisely! 💹</div>
+    <div id="achievements">
+        Achievements:<br>
+        <span id="achieveList"></span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const isMobile = 'ontouchstart' in window;
+        const healthSpan = document.getElementById('health');
+        const tokensSpan = document.getElementById('tokens');
+        const pnlSpan = document.getElementById('pnl');
+        const scoreSpan = document.getElementById('score');
+        const levelSpan = document.getElementById('level');
+        const mcSpan = document.getElementById('mc');
+        const liquiditySpan = document.getElementById('liquidity');
+        const volumeSpan = document.getElementById('volume');
+        const communitySpan = document.getElementById('community');
+        const tradePanel = document.getElementById('tradePanel');
+        const gameOver = document.getElementById('gameOver');
+        const finalPnl = document.getElementById('finalPnl');
+        const finalScore = document.getElementById('finalScore');
+        const achievements = document.getElementById('achievements');
+        const achieveList = document.getElementById('achieveList');
+
+        // Enhanced Variables
+        let player = { x: 400, y: 500, health: 100, speed: 6, level: 1 }; // Upgraded speed
+        let drones = []; // {x, y, health: 50, type: 'elite'}
+        let enemies = []; // {x, y, health: 30, speed: 2, type: 'dirtElite'}
+        let projectiles = []; // {x, y, dx, dy, damage: 10, trail: []}
+        let particles = []; // Explosion effects: {x, y, radius, color, alpha, life}
+        let tokens = 100;
+        let pnl = 0;
+        let score = 0;
+        let level = 1;
+        let marketCap = 576000;
+        let liquidity = 50000;
+        let volume = 10000;
+        let communityStrength = 'Elite';
+        let keys = {};
+        let gameRunning = true;
+        let achievementsUnlocked = [];
+
+        // Fancy Leaf Symbol (SVG with glow)
+        const leafPath = new Path2D('M50 10 C20 40 80 40 50 70 C20 40 80 40 50 10');
+
+        // Controls Setup
+        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keyup', e => keys[e.key] = false);
+        if (isMobile) {
+            canvas.addEventListener('touchmove', e => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                player.x = touch.clientX - canvas.getBoundingClientRect().left;
+                player.y = touch.clientY - canvas.getBoundingClientRect().top;
+            });
+            document.getElementById('deployBtn').addEventListener('touchstart', deployDrone);
+            document.getElementById('specialBtn').addEventListener('touchstart', specialAttack);
+        } else {
+            document.getElementById('deployBtn').addEventListener('click', deployDrone);
+            document.getElementById('specialBtn').addEventListener('click', specialAttack);
+        }
+
+        // Update
+        function update() {
+            if (!gameRunning) return;
+
+            // Player Movement with Boost
+            let speedBoost = level * 0.5;
+            if (keys['ArrowLeft']) player.x -= player.speed + speedBoost;
+            if (keys['ArrowRight']) player.x += player.speed + speedBoost;
+            if (keys['ArrowUp']) player.y -= player.speed + speedBoost;
+            if (keys['ArrowDown']) player.y += player.speed + speedBoost;
+            player.x = Math.max(0, Math.min(800, player.x));
+            player.y = Math.max(0, Math.min(600, player.y));
+
+            // Spawn Elite Enemies
+            if (Math.random() < 0.03 + level * 0.01) {
+                enemies.push({ x: Math.random() * 800, y: 0, health: 30 + (score / 5) + level * 10, speed: 2 + level * 0.5, type: 'dirtElite' });
+            }
+
+            // Enemy Movement with Zigzag
+            enemies.forEach(enemy => {
+                enemy.y += enemy.speed;
+                enemy.x += Math.sin(enemy.y / 20) * 2; // Zigzag effect
+                if (enemy.y > 600) {
+                    player.health -= 15 + level * 5;
+                    enemies = enemies.filter(e => e !== enemy);
+                    checkGameOver();
+                }
+            });
+
+            // Drones AI with Targeting
+            drones.forEach(drone => {
+                let target = null;
+                let minDist = Infinity;
+                enemies.forEach(enemy => {
+                    const dist = Math.sqrt((enemy.x - drone.x)**2 + (enemy.y - drone.y)**2);
+                    if (dist < minDist) minDist = dist, target = enemy;
+                });
+                if (target) {
+                    // Move towards target
+                    const dx = target.x - drone.x;
+                    const dy = target.y - drone.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist > 50) {
+                        drone.x += (dx / dist) * 3;
+                        drone.y += (dy / dist) * 3;
+                    }
+                    if (Math.random() < 0.15) {
+                        projectiles.push({ x: drone.x, y: drone.y, dx: (target.x - drone.x) / 50, dy: (target.y - drone.y) / 50, damage: 15 + level * 5, trail: [] });
+                    }
+                }
+            });
+
+            // Projectiles with Trails
+            projectiles.forEach(proj => {
+                proj.trail.push({x: proj.x, y: proj.y});
+                if (proj.trail.length > 10) proj.trail.shift();
+                proj.x += proj.dx * 7;
+                proj.y += proj.dy * 7;
+                enemies.forEach(enemy => {
+                    if (Math.sqrt((proj.x - enemy.x)**2 + (proj.y - enemy.y)**2) < 20) {
+                        enemy.health -= proj.damage;
+                        projectiles = projectiles.filter(p => p !== proj);
+                        createExplosion(proj.x, proj.y, '#FFD700'); // Gold explosion
+                        if (enemy.health <= 0) {
+                            enemies = enemies.filter(e => e !== enemy);
+                            tokens += 10 + level * 5;
+                            score += 20 + level * 10;
+                            volume += 200 + level * 50;
+                            createExplosion(enemy.x, enemy.y, '#FF4500'); // Fiery explosion
+                            if (score > 100 * level) levelUp();
+                            unlockAchievement('Enemy Slayer 🏅');
+                        }
+                    }
+                });
+            });
+
+            // Particles Decay
+            particles.forEach(part => {
+                part.life--;
+                part.alpha -= 0.02;
+                part.radius += 0.5;
+            });
+            particles = particles.filter(part => part.life > 0);
+
+            // Crypto Dynamics
+            marketCap = 576000 + score * 200 + pnl * 100;
+            liquidity = 50000 + tokens * 20 - pnl * 50;
+            mcSpan.textContent = `$${Math.floor(marketCap / 1000)}K`;
+            liquiditySpan.textContent = `$${Math.floor(liquidity / 1000)}K`;
+            volumeSpan.textContent = `$${Math.floor(volume / 1000)}K`;
+            if (volume > 30000) communityStrength = 'Supreme';
+            communitySpan.textContent = communityStrength;
+
+            // HUD Update
+            healthSpan.textContent = player.health;
+            tokensSpan.textContent = tokens;
+            pnlSpan.textContent = pnl;
+            scoreSpan.textContent = score;
+            levelSpan.textContent = level;
+        }
+
+        // Draw with Effects
+        function draw() {
+            ctx.clearRect(0, 0, 800, 600);
+
+            // Lux Ground with Symbols
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, 550, 800, 50);
+            for (let i = 0; i < 15; i++) {
+                ctx.fillStyle = '#A0522D';
+                ctx.fillRect(Math.random() * 800, 550 + Math.random() * 30, 25, 25);
+                ctx.font = '20px Arial';
+                ctx.fillText('💣', Math.random() * 800, 580); // Military symbols
+            }
+
+            // Player with Glow
+            ctx.save();
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 20;
+            ctx.translate(player.x, player.y);
+            ctx.scale(2.5, 2.5);
+            ctx.fillStyle = '#32CD32';
+            ctx.fill(leafPath);
+            ctx.restore();
+
+            // Drones with Animation
+            drones.forEach(drone => {
+                ctx.save();
+                ctx.translate(drone.x, drone.y + Math.sin(Date.now() / 200) * 5); // Hover effect
+                ctx.shadowColor = '#00FF00';
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#90EE90';
+                ctx.fill(leafPath);
+                ctx.restore();
+            });
+
+            // Enemies with Effects
+            enemies.forEach(enemy => {
+                ctx.save();
+                ctx.shadowColor = '#FF0000';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#000';
+                ctx.fillRect(enemy.x - 15, enemy.y - 25, 30, 50);
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(enemy.x - 10, enemy.y + 15, 20, 15);
+                ctx.font = '15px Arial';
+                ctx.fillText('🔥', enemy.x, enemy.y); // Fire symbol
+                ctx.restore();
+            });
+
+            // Projectiles with Trails
+            projectiles.forEach(proj => {
+                ctx.strokeStyle = 'rgba(0,255,0,0.5)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                proj.trail.forEach((point, i) => {
+                    if (i === 0) ctx.moveTo(point.x, point.y);
+                    else ctx.lineTo(point.x, point.y);
+                });
+                ctx.stroke();
+                ctx.fillStyle = '#00FF00';
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Particles
+            particles.forEach(part => {
+                ctx.fillStyle = `rgba(${part.color}, ${part.alpha})`;
+                ctx.beginPath();
+                ctx.arc(part.x, part.y, part.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Game Loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        gameLoop();
+
+        // Deploy Elite Drone
+        function deployDrone() {
+            if (tokens >= 15) {
+                drones.push({ x: player.x, y: player.y - 30, health: 60 + level * 10, type: 'elite' });
+                tokens -= 15;
+                liquidity += 300;
+                unlockAchievement('Drone Master 🚀');
+            }
+        }
+
+        // Special Attack (New Feature)
+        function specialAttack() {
+            if (tokens >= 50) {
+                enemies.forEach(enemy => {
+                    enemy.health -= 50;
+                    createExplosion(enemy.x, enemy.y, '0,255,0');
+                });
+                enemies = enemies.filter(e => e.health > 0);
+                tokens -= 50;
+                pnl += 20;
+                unlockAchievement('Supreme Blast ⚡');
+            }
+        }
+
+        // Explosion Effect
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x, y,
+                    radius: Math.random() * 5 + 5,
+                    color: color || Math.floor(Math.random() * 255) + ',' + Math.floor(Math.random() * 255) + ',' + Math.floor(Math.random() * 255),
+                    alpha: 1,
+                    life: 30 + Math.random() * 20
+                });
+            }
+        }
+
+        // Level Up
+        function levelUp() {
+            level++;
+            player.health += 50;
+            player.speed += 1;
+            unlockAchievement(`Level ${level} Elite 🌟`);
+        }
+
+        // Achievements
+        function unlockAchievement(name) {
+            if (!achievementsUnlocked.includes(name)) {
+                achievementsUnlocked.push(name);
+                achieveList.innerHTML = achievementsUnlocked.join('<br>');
+                achievements.style.display = 'block';
+                setTimeout(() => achievements.style.display = 'none', 5000);
+            }
+        }
+
+        // Trade Enhanced
+        function openTrade() {
+            tradePanel.style.display = 'block';
+        }
+        function closeTrade() {
+            tradePanel.style.display = 'none';
+        }
+        function trade(type) {
+            const amount = type === 'buy' ? parseInt(document.getElementById('buyAmount').value) : parseInt(document.getElementById('sellAmount').value);
+            if (type === 'buy' && tokens >= amount * 8) {
+                player.health += amount * 10;
+                player.speed += amount * 0.5;
+                tokens -= amount * 8;
+                pnl -= amount * 3;
+                volume += amount * 200;
+                unlockAchievement('Trade Tycoon 📈');
+            } else if (type === 'sell') {
+                tokens += amount * 20;
+                pnl += amount * 15;
+                liquidity -= amount * 30;
+                if (liquidity < 20000) communityStrength = 'Premium';
+                unlockAchievement('Liquidity Lord 💧');
+            }
+            closeTrade();
+        }
+
+        // Game Over
+        function checkGameOver() {
+            if (player.health <= 0) {
+                gameRunning = false;
+                gameOver.style.display = 'block';
+                finalPnl.textContent = pnl;
+                finalScore.textContent = score;
+            }
+        }
+    </script>
+</body>
+</html>
